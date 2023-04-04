@@ -1,0 +1,250 @@
+-- ======================================
+--== ENTRADA base:
+-- 1. pdm_piura_uso_actual_suelos, OR
+-- 2. sbn_predios_estatales_2019 + pdm_piura_clasificacion_usos_suelo
+-- ======================================
+-- INPUT: 
+
+-- ======================================
+-- 1 de 3: DATOS ECONOMICOS DE LA GEOGRAFIA Y SUELO.
+-- ======================================
+
+DROP TABLE IF EXISTS aML001_temp4_Economia;
+
+create table aML001_temp4_Economia
+as 
+	select 
+	   a.id, a.geom, 
+	   --a.clas_uso, a.scla_uso,
+		b4.simb_clas, b4.desc_clas, b4.scla1_urb,
+		c4.tipo_aeco, c4.sect_aeco
+	  FROM pdm_piura_uso_actual_suelos a
+		 LEFT JOIN LATERAL
+		   (SELECT
+				simb_clas, desc_clas, scla1_urb
+			 FROM pdm_piura_clasificacion_usos_suelo b4
+			  WHERE ST_intersects(a.geom, b4.geom)
+			  LIMIT 1
+			) b4 ON TRUE
+			 LEFT JOIN LATERAL
+		   (SELECT
+				tipo_aeco, sect_aeco 
+			 FROM pdm_piura_actividades_economicas c4
+			  WHERE ST_intersects(a.geom, c4.geom)
+			  LIMIT 1
+			) c4 ON TRUE
+; 
+--select * FROM aML001_temp4_Economia
+
+-- ==========================================================================
+-- 2 DE 3: RIESGOS: aML001_temp3_R
+-- ==========================================================================
+-- -- riesgos de sismo, otros
+
+DROP TABLE IF EXISTS aML001_temp3_R;
+create table aML001_temp3_R
+as 
+	select 
+	   a.id, a.geom, 
+	   --a.clas_uso, a.scla_uso,
+	   b2.niv_riesgo_sismo, b2.des_riesgo_sismo,
+	   c2.niv_riesgo_masas, c2.desc_riesgo_masas,
+	   d2.niv_riesgo_pluvial , d2.desc_riesgo_pluvial,
+	   e2.niv_riesgo_fluvial , e2.desc_riesgo_fluvial
+	  FROM pdm_piura_uso_actual_suelos a
+		 LEFT JOIN LATERAL
+		   (SELECT
+				niv_riesgo as niv_riesgo_sismo,
+				desc_riesg as des_riesgo_sismo
+			 FROM pdm_piura_riesgo_sismo b2
+			  WHERE ST_intersects(a.geom, b2.geom)
+			  LIMIT 1
+			) b2 ON TRUE
+		 LEFT JOIN LATERAL
+		   (SELECT 
+				niv_riesgo as niv_riesgo_masas,
+				desc_riesg as desc_riesgo_masas
+			 FROM pdm_piura_riesgo_movimiento_masas c2
+			  WHERE ST_intersects(a.geom, c2.geom)
+			  LIMIT 1
+			) c2 ON TRUE
+		 LEFT JOIN LATERAL
+		   (SELECT
+				niv_riesgo as niv_riesgo_pluvial,
+				desc_riesg as desc_riesgo_pluvial
+			 FROM pdm_piura_riesgo_inundacion_pluvial d2
+			  WHERE ST_intersects(a.geom, d2.geom)
+			  LIMIT 1
+			) d2 ON TRUE
+		 LEFT JOIN LATERAL
+		   (SELECT
+				niv_riesgo as niv_riesgo_fluvial,
+				desc_riesg as desc_riesgo_fluvial
+			 FROM pdm_piura_riesgo_inundacion_fluvial e2
+			  WHERE ST_intersects(a.geom, e2.geom)
+			  LIMIT 1
+			) e2 ON TRUE
+			;
+
+
+-- ==========================================================================
+-- PRINCIPAL: 3 de 3: 
+-- Creacion de tabla principal
+-- Se usan tablas secundarias previas: aML001_temp2_bkp
+-- ==========================================================================
+
+DROP TABLE IF EXISTS aML001_temp2;
+create table aML001_temp2
+as 
+	select 
+	   a.id, a.geom, 
+	   a.clas_uso, a.scla_uso, 
+	   ST_Xmax(a.geom), ST_Xmin(a.geom), ST_Ymax(a.geom), ST_Ymin(a.geom), ST_AREA(a.geom) as Area, ST_Perimeter(a.geom) AS Perimetro,
+		ST_X(ST_Centroid(a.geom)) as ST_X_CENTROIDE, ST_Y(ST_Centroid(a.geom)) as ST_Y_CENTROIDE,
+		d. porc_pend, d.des_pendiente,
+		g.simb_clas, g.desc_clas, g.scla1_urb,
+		g.tipo_aeco, g.sect_aeco,
+		e.niv_riesgo_sismo,
+		e.niv_riesgo_masas, e.desc_riesgo_masas,
+		e.niv_riesgo_pluvial , e.desc_riesgo_pluvial,
+		e.niv_riesgo_fluvial , e.desc_riesgo_fluvial,
+  	    c.pob_tot07, c.pob_tot17, c.pob_tot20,
+		D11.dis_educacion as distancia1 , D11.tipo_eq as tipo_eq11, D11.nom_eq as nom_eq11,
+		D12.distancia as distancia2, D12.tipo_eq as tipo_eq12, D12.nom_eq as nom_eq12,
+		D13.distancia as distancia3, D13.tipo_eq as tipo_eq13, D13.nom_eq as nom_eq13,	
+		D4.distancia as distancia4, D4.tipo_eq tipo_eq_seguridad as , D4.nom_eq	as nom_eq_seguridad,
+		D15.distancia as distancia5, D15.cob_rs17,
+		D16.distancia as distancia6, D16.cob_ap17,
+		D17.distancia as distancia7, D17.cob_de17,
+		D18.distancia as distancia8, D18.cob_ee17,
+		D19.distancia as distancia9, D19.val_min, D19.val_max,
+		D1_10.distancia as distancia10, D1_10.vial_sup_via,	
+		D11.distancia as distancia11, D11.scla_uso as scla_uso11 , D11.clas_uso as clas_uso11
+						
+	  FROM pdm_piura_uso_actual_suelos a
+		LEFT JOIN LATERAL
+		   (SELECT
+			pob_tot07,pob_tot17, pob_tot20
+			 FROM pdm_piura_densidad_urbana c
+			  WHERE ST_Contains(a.geom, c.geom)
+			  LIMIT 1
+			) c ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT porc_pend, descrip as des_pendiente
+			FROM pdm_piura_pendiente d
+			  WHERE ST_intersects(a.geom, d.geom)
+			  LIMIT 1
+			) d ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT 
+					e.niv_riesgo_sismo,
+				 	e.niv_riesgo_masas, e.desc_riesgo_masas,
+	   				e.niv_riesgo_pluvial , e.desc_riesgo_pluvial,
+	   				e.niv_riesgo_fluvial , e.desc_riesgo_fluvial
+			FROM aML001_temp3_R e 
+			  WHERE ST_intersects(a.geom, e.geom)
+			  LIMIT 1
+			) e ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				f.cob_rs17, f.cob_ap17, f.cob_de17, f.cob_ee17
+			FROM aML001_temp4_Coberturas f
+			  WHERE ST_intersects(a.geom, f.geom)
+			  LIMIT 1
+			) f ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				g.simb_clas, g.desc_clas, g.scla1_urb,
+				g.tipo_aeco, g.sect_aeco
+			FROM aML001_temp4_Economia g
+			  WHERE ST_intersects(a.geom, g.geom)
+			  LIMIT 1
+			) g ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D1.streets_geom, D1.edu_id, D1.dis_educacion, 
+				D1.tipo_eq, D1.nom_eq
+			FROM aML001_temp5_distancias_1 D1
+			  WHERE ST_intersects(a.geom, D1.streets_geom)
+			  LIMIT 1
+			) D1 ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D12.sid, D12.streets_geom, D12.id, D12.distancia, D12.tipo_eq, D12.nom_eq
+			FROM aML001_temp5_distancias_2 D12
+			  WHERE ST_intersects(a.geom, D12.streets_geom)
+			  LIMIT 1
+			) D12 ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D13.sid, D13.streets_geom, D13.id, D13.distancia, D13.tipo_eq, D13.nom_eq
+			FROM aML001_temp5_distancias_3 D13
+			  WHERE ST_intersects(a.geom, D13.streets_geom)
+			  LIMIT 1
+			) D13 ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D4.sid, D4.streets_geom, D4.id, D4.distancia, D4.tipo_eq, D4.nom_eq
+			FROM aML001_temp5_distancias_4 D4
+			  WHERE ST_intersects(a.geom, D4.streets_geom)
+			  LIMIT 1
+			) D4 ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D15.sid, D15.streets_geom, D15.id, D15.distancia, D15.cob_rs17
+			FROM aML001_temp5_distancias_5 D15
+			  WHERE ST_intersects(a.geom, D15.streets_geom)
+			  LIMIT 1
+			) D15 ON TRUE 
+		LEFT JOIN LATERAL
+		   (SELECT
+				D16.sid, D16.streets_geom, 
+				D16.id, D16.distancia, D16.cob_ap17
+			FROM aML001_temp5_distancias_6 D16
+			  WHERE ST_intersects(a.geom, D16.streets_geom)
+			  LIMIT 1
+			) D16 ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D17.sid, D17.streets_geom, 
+				D17.id, D17.distancia, D17.cob_de17
+			FROM aML001_temp5_distancias_7 D17
+			  WHERE ST_intersects(a.geom, D17.streets_geom)
+			  LIMIT 1
+			) D17 ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D18.sid, D18.streets_geom, 
+				D18.id, D18.distancia, D18.cob_ee17
+			FROM aML001_temp5_distancias_8 D18
+			  WHERE ST_intersects(a.geom, D18.streets_geom)
+			  LIMIT 1
+			) D18 ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D19.sid, D19.streets_geom, 
+				D19.id, D19.distancia, D19.val_min, D19.val_max
+			FROM aML001_temp5_distancias_9 D19
+			  WHERE ST_intersects(a.geom, D19.streets_geom)
+			  LIMIT 1
+			) D19 ON TRUE
+			
+		LEFT JOIN LATERAL
+		   (SELECT
+				D1_10.sid, D1_10.streets_geom, 
+				D1_10.distancia, D1_10.vial_sup_via
+			FROM aML001_temp5_distancias_10 D1_10
+			  WHERE ST_intersects(a.geom, D1_10.streets_geom)
+			  LIMIT 1
+			) D1_10 ON TRUE
+		LEFT JOIN LATERAL
+		   (SELECT
+				D11.sid, D11.streets_geom, 
+				D11.distancia, D11.scla_uso, D11.clas_uso
+			FROM aML001_temp5_distancias_11 D11
+			  WHERE ST_intersects(a.geom, D11.streets_geom)
+			  LIMIT 1
+			) D11 ON TRUE
+; 
+
+COPY aML001_temp2 to 'C:\MLGIS\data4.csv' csv header;

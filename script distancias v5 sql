@@ -1,0 +1,331 @@
+--==
+--== Enzo : Se adiciona distancia a Seguridad
+--== Enzo : uso de Centroide en lugar del polygno en Bruto
+-- ==========================================================================
+-- 1 de x: pdm_piura_equipamiento_urbano: min, EQUIP DISTANCIAS:  tipo_eq, nom_eq
+-- ==========================================================================
+
+DROP TABLE IF EXISTS aML001_temp5_distancias_1;
+CREATE TABLE aML001_temp5_distancias_1 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as edu_geom, D1.id edu_id, D1.tipo_eq as tipo_eq, D1.nom_eq as nom_eq,
+		  ST_Distance(a.geom, D1.geom) AS dis_educacion
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_equipamiento_urbano D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 2000 metros.
+				AND D1.tipo_eq = 'EDUCACION'
+	ORDER BY sid, dis_educacion ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, edu_id, dis_educacion, tipo_eq, nom_eq
+		  --, ST_Distance(streets_geom, edu_geom) AS distancia2
+		FROM Nearest_Via
+;
+--select * from aML001_temp5_distancias_1
+	 
+-- ==========================================================================
+-- 2 de x: pdm_piura_equipamiento_urbano: RECREACION PUBLICA,  tipo_eq, nom_eq
+-- ==========================================================================
+DROP TABLE IF EXISTS aML001_temp5_distancias_2;
+CREATE TABLE aML001_temp5_distancias_2 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.tipo_eq as tipo_eq, D1.nom_eq as nom_eq,
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_equipamiento_urbano D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.
+				AND D1.tipo_eq = 'RECREACION PUBLICA'
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, tipo_eq, nom_eq
+		  --, ST_Distance(streets_geom, edu_geom) AS distancia2
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_2;
+
+	 
+-- ==========================================================================
+-- 3 de x: pdm_piura_equipamiento_urbano: 'SALUD',  tipo_eq, nom_eq
+-- ==========================================================================
+DROP TABLE IF EXISTS aML001_temp5_distancias_3;
+CREATE TABLE aML001_temp5_distancias_3 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.tipo_eq as tipo_eq, D1.nom_eq as nom_eq,
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_equipamiento_urbano D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.
+				AND D1.tipo_eq = 'SALUD'
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, tipo_eq, nom_eq
+		  --, ST_Distance(streets_geom, edu_geom) AS distancia2
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_3;
+
+	 
+-- ==========================================================================
+-- 4 de x: pdm_piura_equipamiento_urbano: 'OU: SEGURIDAD',  tipo_eq, nom_eq
+-- ==========================================================================
+DROP TABLE IF EXISTS aML001_temp5_distancias_4;
+CREATE TABLE aML001_temp5_distancias_4 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.tipo_eq as tipo_eq, D1.observ as nom_eq,
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_equipamiento_urbano D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.
+				AND D1.tipo_eq = 'OU: SEGURIDAD'
+				AND  (D1.observ = 'COMISARIA' or D1.observ = 'SERENAZGO')
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, tipo_eq, nom_eq
+		  --, ST_Distance(streets_geom, edu_geom) AS distancia2
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_4;
+
+-- ==========================================================================
+-- COBERTURAS
+-- ==========================================================================
+-- ==========================================================================
+-- 5 de x: pdm_piura_cobertura_recogo_residuos: cob_rs17
+-- ==========================================================================
+DROP TABLE IF EXISTS aML001_temp5_distancias_5;
+CREATE TABLE aML001_temp5_distancias_5 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.cob_rs17 as cob_rs17 ,
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_cobertura_recogo_residuos D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.
+				AND D1.cob_rs17 = 'CON COBERTURA'
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, cob_rs17
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_5
+-- ==========================================================================
+-- 6 de x: pdm_piura_cobertura_agua_potable: cob_ap17
+-- ==========================================================================
+DROP TABLE IF EXISTS aML001_temp5_distancias_6;
+CREATE TABLE aML001_temp5_distancias_6 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.cob_ap17 as cob_ap17 ,
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_cobertura_agua_potable D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.
+				AND D1.cob_ap17 = 'CON COBERTURA'
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, cob_ap17
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_6;
+ 
+-- ==========================================================================
+-- 7 de x: pdm_piura_cobertura_desague: cob_de17
+-- ==========================================================================
+-- cob_ap17 
+
+
+DROP TABLE IF EXISTS aML001_temp5_distancias_7;
+CREATE TABLE aML001_temp5_distancias_7 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.cob_de17 as cob_de17 ,
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_cobertura_desague D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.
+				AND D1.cob_de17 = 'CON COBERTURA'
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, cob_de17
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_7;
+ 
+ 
+
+-- ==========================================================================
+-- 8 de x: pdm_piura_cobertura_energia_electrica:   cob_ee17
+-- ==========================================================================
+DROP TABLE IF EXISTS aML001_temp5_distancias_8;
+CREATE TABLE aML001_temp5_distancias_8 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.cob_ee17 as cob_ee17 ,
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_cobertura_energia_electrica D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.
+				AND D1.cob_ee17 = 'CON COBERTURA'
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, cob_ee17
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_8;
+
+-- ==========================================================================
+-- 9 de x: pdm_piura_valor_suelo: VALOR ECONOMICO CERCANO: val_min, val_max, rango_vs
+-- ==========================================================================
+
+
+DROP TABLE IF EXISTS aML001_temp5_distancias_9;
+CREATE TABLE aML001_temp5_distancias_9 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.val_min as val_min, D1.val_max as val_max, D1.rango_vs as rango_vs,
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_valor_suelo D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, val_min, val_max, rango_vs
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_9;
+
+
+
+-- ==========================================================================
+-- 10 de x: pdm_piura_sistema_vial_actual: 
+-- ==========================================================================
+
+
+DROP TABLE IF EXISTS aML001_temp5_distancias_10;
+CREATE TABLE aML001_temp5_distancias_10 AS
+WITH Nearest_Via AS (
+	SELECT
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  a.id as sid, a.geom, 
+		  b5.geom as vial_geom, b5.id , b5.sup_via as vial_sup_via,
+		  ST_Distance(a.geom, b5.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+ LEFT JOIN  pdm_piura_sistema_vial_actual b5
+	  ON ST_DWithin(a.geom, b5.geom, 1800)
+	  AND b5.sup_via = 'ASFALTADA' OR b5.sup_via = 'AFIRMADO'
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  streets_geom, sid, vial_sup_via, distancia
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_10;	
+
+
+
+-- ==========================================================================
+-- 11 de x: DISTANCIAS
+-- ==========================================================================
+
+
+DROP TABLE IF EXISTS aML001_temp5_distancias_11;
+CREATE TABLE aML001_temp5_distancias_11 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_Centroid(a.geom) as Centroide,
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D11.scla_uso, D11.clas_uso
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_uso_actual_suelos D11 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D11.geom, 1000)	 -- 1000 metros.
+				AND D11.scla_uso = 'VIVIENDA' OR D11.scla_uso = 'VIVIENDA - COMERCIO'
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  DISTINCT ON (sid)
+		  sid, streets_geom, id, distancia, D11.scla_uso, D11.clas_uso
+		FROM Nearest_Via
+;
+select * from aML001_temp5_distancias_11;
+
+
+
+
+-- =======1===================================================================
+-- 4 de x: pdm_piura_densidad_urbana a 3 km : pob_tot07,pob_tot17, pob_tot20
+-- ==========================================================================
+/* 
+DROP TABLE aML001_temp5_distancias_4;
+CREATE TABLE aML001_temp5_distancias_4 AS
+WITH Nearest_Via AS 
+	(
+	SELECT
+		  a.id as sid, a.geom, 
+		  ST_GeometryN(a.geom,1) AS streets_geom,
+		  D1.geom as geom, D1.id id, D1.pob_tot07 AS pob_tot07, D1.pob_tot17 AS pob_tot17, D1.pob_tot20 AS pob_tot20
+		  ST_Distance(a.geom, D1.geom) AS distancia
+	FROM pdm_piura_uso_actual_suelos a
+	LEFT JOIN  pdm_piura_densidad_urbana D1 -- Es la distancia a estos geoms.
+				ON ST_DWithin(a.geom, D1.geom, 3000)	 -- 3000 metros.			
+	ORDER BY sid, distancia ASC
+	)
+	SELECT
+		  sid,
+		  SUM(pob_tot07), SUM(pob_tot17), SUM(pob_tot20) (sid)
+		  streets_geom, id, distancia
+		FROM Nearest_Via
+		GROUP BY a.id 
+;
+select * from aML001_temp5_distancias_4 */
